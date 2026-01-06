@@ -99,29 +99,4 @@ function App() {
   );
 }
 
-function App() {
-  return (
-    <Router>
-      <AuthProvider>
-        <CartProvider>
-          <div className="app-container">
-            <Header />
-            <main className="container mt-md">
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/product/:id" element={<ProductDetail />} />
-                <Route path="/cart" element={<Cart />} />
-                <Route path="/seller" element={<SellerDashboard />} />
-                <Route path="/admin" element={<AdminDashboard />} />
-              </Routes>
-            </main>
-          </div>
-        </CartProvider>
-      </AuthProvider>
-    </Router>
-  );
-}
-
 export default App;
