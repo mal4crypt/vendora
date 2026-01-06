@@ -14,8 +14,16 @@ If you don't have Android Studio, follow these exact steps on your Kali terminal
 1.  **Update Repository & Install Prerequisites**:
     ```bash
     sudo apt update
-    # Note: Use the exact names below
+    # Choice A: Standard Java 17
     sudo apt install openjdk-17-jdk android-sdk-platform-tools android-sdk-common
+    
+    # Choice B: Fallback (if A fails)
+    sudo apt install default-jdk android-sdk-platform-tools
+    
+    # Choice C: Professional way (if apt fails entirely)
+    curl -s "https://get.sdkman.io" | bash
+    source "$HOME/.sdkman/bin/sdkman-init.sh"
+    sdk install java 17.0.7-tem
     ```
 
 2.  **Set Environment Variables**:
