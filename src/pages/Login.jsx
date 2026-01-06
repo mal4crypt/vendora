@@ -20,36 +20,18 @@ const Login = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsLoading(true);
+        setError('');
 
-        // Simulate API call
-        setTimeout(() => {
-            if (formData.email && formData.password) {
-                // Mock logic: specific admin credentials, else email patterns
-                let type = 'customer';
-                if (formData.email === 'mal4crypt404@gmail.com' && formData.password === 'thetaskmaster') {
-                    type = 'admin';
-                } else if (formData.email.includes('admin')) {
-                    type = 'admin';
-                } else if (formData.email.includes('seller')) {
-                    type = 'seller';
-                }
-
-                login({
-                    id: '123',
-                    name: 'Test User',
-                    email: formData.email,
-                    type: type
-                });
-
-                setIsLoading(false);
-                if (type === 'admin') navigate('/admin');
-                else if (type === 'seller') navigate('/seller');
-                else navigate('/');
-            } else {
-                setError('Invalid credentials');
-                setIsLoading(false);
-            }
-        }, 1000);
+        try {
+            await login(formData.email, formData.password);
+            // Redirect happens automatically in AuthContext/App shell if we listen to onAuthStateChange
+            // But for manual control:
+            setIsLoading(false);
+            navigate('/');
+        } catch (err) {
+            setError(err.message || 'Invalid login credentials');
+            setIsLoading(false);
+        }
     };
 
     return (

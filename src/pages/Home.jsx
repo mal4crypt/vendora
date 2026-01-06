@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Filter, MapPin, ChevronDown, Utensils, Wrench, Smartphone, Truck, Home as HomeIcon, Dog, Droplet, Briefcase } from 'lucide-react';
 import { MOCK_PRODUCTS } from '../data/mockData';
 import ProductCard from '../components/marketplace/ProductCard';
 import Button from '../components/common/Button';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../supabase';
 
 const CATEGORIES = [
     { id: 'all', label: 'All', icon: <Briefcase size={20} />, color: '#0052CC' },
@@ -20,12 +21,38 @@ const CITIES = ['Lagos, Nigeria', 'Abuja, FCT', 'Port Harcourt, Rivers', 'Kano, 
 
 const Home = () => {
     const { user } = useAuth();
+    const [products, setProducts] = useState(MOCK_PRODUCTS);
+    const [loading, setLoading] = useState(true);
     const [activeCategory, setActiveCategory] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCity, setSelectedCity] = useState(CITIES[0]);
     const [showLocationDropdown, setShowLocationDropdown] = useState(false);
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
     const [filterType, setFilterType] = useState('all'); // all, trading, services
+
+    useEffect(() => {
+        const fetchProducts = async () => {
+            setLoading(true);
+            try {
+                const { data, error } = await supabase
+                    .from('products')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+                if (data && data.length > 0) {
+                    setProducts(data);
+                }
+            } catch (err) {
+                console.error('Error fetching products from Supabase:', err);
+                // Fallback to mock data already in state
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchProducts();
+    }, []);
 
     // Dynamic Greeting
     const getGreeting = () => {
@@ -35,7 +62,7 @@ const Home = () => {
         return 'Good evening';
     };
 
-    const filteredProducts = MOCK_PRODUCTS.filter(p => {
+    const filteredProducts = products.filter(p => {
         const matchesCategory = activeCategory === 'all' || p.category === activeCategory;
         const matchesFilter = filterType === 'all' || p.category === filterType;
         const matchesSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase());
@@ -48,7 +75,7 @@ const Home = () => {
             <div className="flex justify-between items-center mb-md" style={{ marginBottom: '16px' }}>
                 <div>
                     <h2 className="font-bold" style={{ fontSize: '24px' }}>
-                        {getGreeting()}{user ? `, ${user.name}` : ''}
+                        {getGreeting()}{user ? `, ${user.full_name || user.email}` : ''}
                     </h2>
                 </div>
 
@@ -210,13 +237,21 @@ const Home = () => {
             </div>
 
             {/* Product Grid */}
-            <h2 className="font-bold text-lg mb-md">{activeCategory === 'all' ? 'Trending Ads' : `${CATEGORIES.find(c => c.id === activeCategory)?.label} Results`}</h2>
+            <div className="flex justify-between items-center mb-md">
+                <h2 className="font-bold text-lg">{activeCategory === 'all' ? 'Trending Ads' : `${CATEGORIES.find(c => c.id === activeCategory)?.label} Results`}</h2>
+                {loading && <span className="text-secondary text-sm">Loading...</span>}
+            </div>
 
             <div className="grid-products" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px' }}>
                 {filteredProducts.map(product => (
                     <ProductCard key={product.id} product={product} />
                 ))}
             </div>
+            {!loading && filteredProducts.length === 0 && (
+                <div className="text-center p-xl text-secondary">
+                    No products found in this category.
+                </div>
+            )}
         </div>
     );
 };

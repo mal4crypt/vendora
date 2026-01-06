@@ -7,9 +7,10 @@ import Button from '../components/common/Button';
 
 const Register = () => {
     const navigate = useNavigate();
-    const { login } = useAuth();
+    const { register } = useAuth();
     const [accountType, setAccountType] = useState('customer'); // customer | seller
     const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState('');
     const [formData, setFormData] = useState({
         email: '',
         password: '',
@@ -22,24 +23,28 @@ const Register = () => {
     const handleChange = (e) => {
         const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
         setFormData({ ...formData, [e.target.name]: value });
+        setError('');
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setIsLoading(true);
+        setError('');
 
-        // Mock API call
-        setTimeout(() => {
-            login({
-                id: Date.now().toString(),
+        try {
+            await register(formData.email, formData.password, {
                 name: formData.name,
-                email: formData.email,
-                type: accountType,
-                location: formData.address // Simplified for MVP
+                role: accountType,
+                city: formData.address.split(',')[0].trim(),
+                state: formData.address.split(',')[1]?.trim() || '',
+                commission_agreed: formData.agreedToCommission
             });
             setIsLoading(false);
             navigate(accountType === 'seller' ? '/seller' : '/');
-        }, 1000);
+        } catch (err) {
+            setError(err.message || 'Registration failed');
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -48,6 +53,8 @@ const Register = () => {
                 <h2 className="text-center text-primary-blue font-bold mb-md" style={{ fontSize: '24px' }}>
                     Create Account
                 </h2>
+
+                {error && <div className="p-sm bg-light text-danger rounded-md text-sm text-center mb-md" style={{ backgroundColor: '#fff2f0', border: '1px solid #ffccc7', padding: '8px', marginBottom: '16px', color: 'var(--danger)' }}>{error}</div>}
 
                 {/* Account Type Toggle */}
                 <div className="flex justify-center bg-light p-1 rounded-md mb-md" style={{ background: '#F4F5F7', padding: '4px', borderRadius: '8px', marginBottom: '24px' }}>

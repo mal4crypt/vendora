@@ -1,17 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import { Map, Users, List, Trash2, Ban, MapPin } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../supabase';
 
 const AdminDashboard = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('logistics');
 
-    if (!user || user.type !== 'admin') {
+    if (!user || (user.role !== 'admin' && user.type !== 'admin')) {
         return (
             <div className="container mt-md text-center p-md">
                 <Card>
@@ -126,45 +127,80 @@ const LogisticsView = () => (
 );
 
 const UserModeration = () => {
-    const [users, setUsers] = useState([
-        { id: 1, name: 'Bad Actor', email: 'scam@test.com', status: 'active', role: 'seller' },
-        { id: 2, name: 'Good Seller', email: 'seller@test.com', status: 'active', role: 'seller' },
-        { id: 3, name: 'Customer A', email: 'cust@test.com', status: 'active', role: 'customer' },
-    ]);
+    const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    const handleAction = (id, action) => {
+    useEffect(() => {
+        fetchUsers();
+    }, []);
+
+    const fetchUsers = async () => {
+        setLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .order('updated_at', { ascending: false });
+
+            if (error) throw error;
+            setUsers(data || []);
+        } catch (err) {
+            console.error('Error fetching users:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleAction = async (id, action) => {
         if (confirm(`Are you sure you want to ${action} this user?`)) {
-            setUsers(users.filter(u => u.id !== id));
+            try {
+                if (action === 'delete') {
+                    const { error } = await supabase.from('profiles').delete().eq('id', id);
+                    if (error) throw error;
+                    setUsers(users.filter(u => u.id !== id));
+                } else if (action === 'suspend') {
+                    // Suspended logic placeholder
+                    alert('User suspended (placeholder)');
+                }
+            } catch (err) {
+                alert('Action failed: ' + err.message);
+            }
         }
     };
 
     return (
         <Card>
-            <h2 className="font-bold mb-md">User Moderation</h2>
+            <div className="flex justify-between items-center mb-md">
+                <h2 className="font-bold">User Moderation</h2>
+                {loading && <span className="text-secondary text-sm">Loading users...</span>}
+            </div>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                     <tr className="text-left text-secondary border-b border-color">
                         <th className="p-sm">User</th>
                         <th className="p-sm">Role</th>
-                        <th className="p-sm">Status</th>
+                        <th className="p-sm">Location</th>
                         <th className="p-sm text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {users.map(user => (
-                        <tr key={user.id} className="border-b border-color">
+                    {!loading && users.length === 0 && (
+                        <tr><td colSpan="4" className="text-center p-md text-secondary">No users found.</td></tr>
+                    )}
+                    {users.map(u => (
+                        <tr key={u.id} className="border-b border-color">
                             <td className="p-sm">
-                                <div className="font-bold">{user.name}</div>
-                                <div className="text-xs text-secondary">{user.email}</div>
+                                <div className="font-bold">{u.full_name || 'N/A'}</div>
+                                <div className="text-xs text-secondary">{u.id}</div>
                             </td>
-                            <td className="p-sm capitalize">{user.role}</td>
-                            <td className="p-sm"><span className="bg-light px-2 py-1 rounded text-xs">{user.status}</span></td>
+                            <td className="p-sm capitalize">{u.role}</td>
+                            <td className="p-sm text-sm">{u.city}, {u.state}</td>
                             <td className="p-sm text-right">
                                 <div className="flex justify-end gap-sm">
-                                    <Button variant="ghost" size="sm" onClick={() => handleAction(user.id, 'suspend')} title="Suspend">
+                                    <Button variant="ghost" size="sm" onClick={() => handleAction(u.id, 'suspend')} title="Suspend">
                                         <Ban size={16} color="var(--warning)" />
                                     </Button>
-                                    <Button variant="ghost" size="sm" onClick={() => handleAction(user.id, 'delete')} title="Delete">
+                                    <Button variant="ghost" size="sm" onClick={() => handleAction(u.id, 'delete')} title="Delete">
                                         <Trash2 size={16} color="var(--danger)" />
                                     </Button>
                                 </div>
