@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Vendora</string>
+    <string name="title_activity_main">Vendora</string>
+    <string name="package_name">com.vendora.app</string>
+    <string name="custom_url_scheme">com.vendora.app</string>
+</resources>
