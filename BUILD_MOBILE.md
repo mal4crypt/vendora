@@ -14,29 +14,27 @@ If you don't have Android Studio, follow these exact steps on your Kali terminal
 1.  **Update Repository & Install Prerequisites**:
     ```bash
     sudo apt update
-    # Choice A: Standard Java 17
     sudo apt install openjdk-17-jdk android-sdk-platform-tools android-sdk-common
-    
-    # Choice B: Fallback (if A fails)
-    sudo apt install default-jdk android-sdk-platform-tools
-    
-    # Choice C: Professional way (if apt fails entirely)
-    curl -s "https://get.sdkman.io" | bash
-    source "$HOME/.sdkman/bin/sdkman-init.sh"
-    sdk install java 17.0.7-tem
     ```
 
-2.  **Set Environment Variables**:
-    Add these to your `~/.bashrc` and then run `source ~/.bashrc`:
+2.  **Fix SDK Path (Crucial)**:
+    Create/Update the `local.properties` file:
     ```bash
-    export ANDROID_HOME=/usr/lib/android-sdk
-    export PATH=$PATH:$ANDROID_HOME/tools/bin:$ANDROID_HOME/platform-tools
+    echo "sdk.dir=/usr/lib/android-sdk" > android/local.properties
     ```
 
-3.  **Install Build Tools**:
+3.  **Install Missing Build Components**:
+    Run this to download the necessary tools (approx 100MB):
     ```bash
-    # You may need to use sdkmanager to get specific platforms
-    sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2"
+    sudo sdkmanager "platforms;android-33" "build-tools;33.0.2"
+    ```
+
+4.  **Build the Project**:
+    ```bash
+    npm run build
+    npx cap sync android
+    cd android
+    ./gradlew assembleDebug
     ```
 
 4.  **Build the Project**:
