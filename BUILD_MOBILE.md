@@ -14,7 +14,13 @@ If you don't have Android Studio, follow these exact steps on your Kali terminal
 1.  **Update Repository & Install Prerequisites**:
     ```bash
     sudo apt update
-    sudo apt install openjdk-17-jdk android-sdk-platform-tools android-sdk-common
+    # Choice A: Standard Java 21
+    sudo apt install openjdk-21-jdk android-sdk-platform-tools android-sdk-common
+    
+    # Choice B: Professional way (Recommended if apt fails)
+    curl -s "https://get.sdkman.io" | bash
+    source "$HOME/.sdkman/bin/sdkman-init.sh"
+    sdk install java 21.0.2-tem
     ```
 
 2.  **Fix SDK Path (Crucial)**:
