@@ -23,21 +23,19 @@ If you don't have Android Studio, follow these exact steps on your Kali terminal
     echo "sdk.dir=/usr/lib/android-sdk" > android/local.properties
     ```
 
-3.  **Install Missing Build Components**:
-    Run this to download the necessary tools (approx 100MB):
+3.  **Accept Licenses (Crucial)**:
+    Run this and type `y` for all prompts (or use the one-liner):
     ```bash
-    sudo sdkmanager "platforms;android-33" "build-tools;33.0.2"
+    yes | sudo sdkmanager --licenses
     ```
 
-4.  **Build the Project**:
+4.  **Install/Update Build Components**:
+    Ensure the specific tools the build is asking for are installed:
     ```bash
-    npm run build
-    npx cap sync android
-    cd android
-    ./gradlew assembleDebug
+    sudo sdkmanager "platforms;android-35" "build-tools;34.0.0"
     ```
 
-4.  **Build the Project**:
+5.  **Build the Project**:
     ```bash
     npm run build
     npx cap sync android
@@ -45,7 +43,7 @@ If you don't have Android Studio, follow these exact steps on your Kali terminal
     ./gradlew assembleDebug
     ```
 
-5.  **Locate your APK**:
+6.  **Locate your APK**:
     The final file will be: `android/app/build/outputs/apk/debug/app-debug.apk`
 
 ---
