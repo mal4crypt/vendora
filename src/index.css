@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;800&family=Inter:wght@400;700&display=swap');
+
 :root {
   /* Colors */
   --primary-blue: #0052CC;
@@ -136,4 +138,29 @@ textarea {
 
 .mt-md {
   margin-top: var(--spacing-md);
+}
+
+.capitalize {
+  text-transform: capitalize;
+}
+
+.text-danger {
+  color: var(--danger);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.logo-text {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  background: linear-gradient(135deg, #0052CC 0%, #00B2FF 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: inline-block;
+  font-size: 28px !important;
+  text-shadow: 0 2px 4px rgba(0, 82, 204, 0.1);
 }

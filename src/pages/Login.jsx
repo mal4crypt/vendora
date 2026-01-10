@@ -22,13 +22,20 @@ const Login = () => {
         setIsLoading(true);
         setError('');
 
+        // Safety timeout in case everything hangs (30s)
+        const timeout = setTimeout(() => {
+            setError('Request is taking longer than expected. Please check your connection.');
+            setIsLoading(false);
+        }, 30000);
+
+
         try {
             await login(formData.email, formData.password);
-            // Redirect happens automatically in AuthContext/App shell if we listen to onAuthStateChange
-            // But for manual control:
+            clearTimeout(timeout);
             setIsLoading(false);
             navigate('/');
         } catch (err) {
+            clearTimeout(timeout);
             setError(err.message || 'Invalid login credentials');
             setIsLoading(false);
         }
@@ -61,6 +68,13 @@ const Login = () => {
                         onChange={handleChange}
                         placeholder="Enter your password"
                     />
+
+                    {/* Forgot Password Link */}
+                    <div className="text-right">
+                        <Link to="/forgot-password" className="text-sm text-primary-blue font-bold">
+                            Forgot Password?
+                        </Link>
+                    </div>
 
                     <Button type="submit" isLoading={isLoading} size="full">
                         Sign In

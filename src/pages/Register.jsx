@@ -31,8 +31,12 @@ const Register = () => {
         setIsLoading(true);
         setError('');
 
+        // Basic verification for Gmail if requested, but standard email validation is usually enough.
+        // We'll just ensure it definitely accepts gmail.com.
+        const emailLower = formData.email.toLowerCase();
+
         try {
-            await register(formData.email, formData.password, {
+            await register(emailLower, formData.password, {
                 name: formData.name,
                 role: accountType,
                 city: formData.address.split(',')[0].trim(),
@@ -103,7 +107,7 @@ const Register = () => {
                         required
                         value={formData.email}
                         onChange={handleChange}
-                        placeholder="user@vendora.com"
+                        placeholder="example@gmail.com"
                     />
 
                     <Input

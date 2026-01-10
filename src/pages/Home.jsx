@@ -5,6 +5,7 @@ import ProductCard from '../components/marketplace/ProductCard';
 import Button from '../components/common/Button';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabase';
+import { CacheService } from '../services/cache';
 
 const CATEGORIES = [
     { id: 'all', label: 'All', icon: <Briefcase size={20} />, color: '#0052CC' },
@@ -32,7 +33,16 @@ const Home = () => {
 
     useEffect(() => {
         const fetchProducts = async () => {
-            setLoading(true);
+            // 1. Try to load from cache first for instant UI
+            const cachedProducts = CacheService.get('products');
+            if (cachedProducts) {
+                setProducts(cachedProducts);
+                setLoading(false); // Valid cache found, stop loading spinner
+            } else {
+                setLoading(true); // No cache, show spinner
+            }
+
+            // 2. Network fetch (background update)
             try {
                 const { data, error } = await supabase
                     .from('products')
@@ -42,10 +52,12 @@ const Home = () => {
                 if (error) throw error;
                 if (data && data.length > 0) {
                     setProducts(data);
+                    // 3. Update cache with fresh data
+                    CacheService.set('products', data, 30); // Cache for 30 minutes
                 }
             } catch (err) {
                 console.error('Error fetching products from Supabase:', err);
-                // Fallback to mock data already in state
+                // If network fails and we have cache, user still sees content!
             } finally {
                 setLoading(false);
             }
@@ -62,6 +74,11 @@ const Home = () => {
         return 'Good evening';
     };
 
+    const capitalizeName = (name) => {
+        if (!name) return '';
+        return name.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+    };
+
     const filteredProducts = products.filter(p => {
         const matchesCategory = activeCategory === 'all' || p.category === activeCategory;
         const matchesFilter = filterType === 'all' || p.category === filterType;
@@ -75,7 +92,7 @@ const Home = () => {
             <div className="flex justify-between items-center mb-md" style={{ marginBottom: '16px' }}>
                 <div>
                     <h2 className="font-bold" style={{ fontSize: '24px' }}>
-                        {getGreeting()}{user ? `, ${user.full_name || user.email}` : ''}
+                        {getGreeting()}{user ? `, ${capitalizeName(user?.full_name || user?.email?.split('@')[0]) || 'Member'}` : ''}
                     </h2>
                 </div>
 

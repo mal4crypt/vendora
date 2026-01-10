@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../supabase';
+import { fetchWithRetry } from '../utils/network';
 
 const AuthContext = createContext(null);
 
@@ -10,18 +11,32 @@ export const AuthProvider = ({ children }) => {
     useEffect(() => {
         // Check active sessions and subscribe to auth changes
         const checkUser = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session?.user) {
-                // Fetch profile data
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('id', session.user.id)
-                    .single();
+            const timeout = setTimeout(() => {
+                setLoading(false);
+            }, 1500); // Fast 1.5s timeout for modern app feel
 
-                setUser({ ...session.user, ...profile });
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session?.user) {
+                    // Fetch profile data
+                    const { data: profile, error: profileError } = await supabase
+                        .from('profiles')
+                        .select('*')
+                        .eq('id', session.user.id)
+                        .maybeSingle();
+
+                    if (!profileError && profile) {
+                        setUser({ ...session.user, ...profile });
+                    } else {
+                        setUser(session.user);
+                    }
+                }
+            } catch (err) {
+                console.error('Auth initialization error:', err);
+            } finally {
+                clearTimeout(timeout);
+                setLoading(false);
             }
-            setLoading(false);
         };
 
         checkUser();
@@ -32,7 +47,7 @@ export const AuthProvider = ({ children }) => {
                     .from('profiles')
                     .select('*')
                     .eq('id', session.user.id)
-                    .single();
+                    .maybeSingle();
                 setUser({ ...session.user, ...profile });
             } else {
                 setUser(null);
@@ -44,10 +59,44 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     const login = async (email, password) => {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        return data;
+        try {
+            // DIRECT RAW FETCH - bypassing SDK hang completely
+            // This is the fastest possible way to check credentials
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+            const response = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': supabaseKey
+                },
+                body: JSON.stringify({ email, password })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                console.error('Login error:', data);
+                throw new Error(data.error_description || data.msg || 'Invalid login credentials');
+            }
+
+            // Manually inject the valid session back into the SDK
+            // This ensures the rest of the app (using the SDK) works normally
+            const { error: setSessionError } = await supabase.auth.setSession({
+                access_token: data.access_token,
+                refresh_token: data.refresh_token
+            });
+
+            if (setSessionError) throw setSessionError;
+
+            return { user: data.user, session: data };
+        } catch (err) {
+            console.error('Direct login failed:', err);
+            throw err;
+        }
     };
+
 
     const register = async (email, password, metadata) => {
         const { data, error } = await supabase.auth.signUp({
@@ -89,9 +138,23 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
     };
 
+    const resetPassword = async (email) => {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+    };
+
+    const updatePassword = async (newPassword) => {
+        const { error } = await supabase.auth.updateUser({
+            password: newPassword
+        });
+        if (error) throw error;
+    };
+
     return (
-        <AuthContext.Provider value={{ user, login, register, logout, loading }}>
-            {!loading && children}
+        <AuthContext.Provider value={{ user, login, register, logout, resetPassword, updatePassword, loading }}>
+            {children}
         </AuthContext.Provider>
     );
 };
