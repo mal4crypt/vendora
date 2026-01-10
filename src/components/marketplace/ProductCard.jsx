@@ -4,11 +4,34 @@ import Card from '../common/Card';
 import Button from '../common/Button';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Heart, ShoppingCart as CartIcon } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 
 const ProductCard = ({ product }) => {
     const navigate = useNavigate();
     const { addToCart } = useCart();
+
+    // Wishlist Logic
+    const [isLiked, setIsLiked] = React.useState(() => {
+        const saved = localStorage.getItem('vendora_wishlist');
+        const wishlist = saved ? JSON.parse(saved) : [];
+        return wishlist.includes(product.id);
+    });
+
+    const toggleLike = (e) => {
+        e.stopPropagation();
+        const saved = localStorage.getItem('vendora_wishlist');
+        let wishlist = saved ? JSON.parse(saved) : [];
+
+        if (isLiked) {
+            wishlist = wishlist.filter(id => id !== product.id);
+        } else {
+            wishlist.push(product.id);
+        }
+
+        localStorage.setItem('vendora_wishlist', JSON.stringify(wishlist));
+        setIsLiked(!isLiked);
+    };
 
     const handleAddToCart = (e) => {
         e.stopPropagation();
@@ -28,8 +51,11 @@ const ProductCard = ({ product }) => {
                         PREMIUM
                     </div>
                 )}
-                <button style={{ position: 'absolute', top: '8px', right: '8px', background: 'white', borderRadius: '50%', padding: '6px' }}>
-                    <Heart size={16} color="var(--text-secondary)" />
+                <button
+                    onClick={toggleLike}
+                    style={{ position: 'absolute', top: '8px', right: '8px', background: 'white', borderRadius: '50%', padding: '6px', border: 'none', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}
+                >
+                    <Heart size={16} color={isLiked ? "#FF5630" : "var(--text-secondary)"} fill={isLiked ? "#FF5630" : "none"} />
                 </button>
             </div>
 

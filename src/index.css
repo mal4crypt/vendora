@@ -57,6 +57,7 @@ button {
 a {
   text-decoration: none;
   color: inherit;
+  transition: color 0.2s;
 }
 
 input,
@@ -92,6 +93,10 @@ textarea {
   justify-content: center;
 }
 
+.gap-xs {
+  gap: var(--spacing-xs);
+}
+
 .gap-sm {
   gap: var(--spacing-sm);
 }
@@ -100,8 +105,20 @@ textarea {
   gap: var(--spacing-md);
 }
 
+.relative {
+  position: relative;
+}
+
+.absolute {
+  position: absolute;
+}
+
 .text-center {
   text-align: center;
+}
+
+.font-medium {
+  font-weight: 500;
 }
 
 .font-bold {
@@ -150,6 +167,11 @@ textarea {
 
 .text-secondary {
   color: var(--text-secondary);
+}
+
+/* Custom Helpers */
+.hover\:text-primary-blue:hover {
+  color: var(--primary-blue);
 }
 
 .logo-text {

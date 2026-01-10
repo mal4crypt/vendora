@@ -7,22 +7,29 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabase';
 import { CacheService } from '../services/cache';
 
-const CATEGORIES = [
-    { id: 'all', label: 'All', icon: <Briefcase size={20} />, color: '#0052CC' },
-    { id: 'trading', label: 'Trading', icon: <Smartphone size={20} />, color: '#A2C2F2' },
-    { id: 'catering', label: 'Catering', icon: <Utensils size={20} />, color: '#A2C2F2' },
-    { id: 'repair', label: 'Repair', icon: <Wrench size={20} />, color: '#A2C2F2' },
-    { id: 'gas', label: 'Gas', icon: <Droplet size={20} />, color: '#A2C2F2' },
-    { id: 'logistics', label: 'Logistics', icon: <Truck size={20} />, color: '#A2C2F2' },
-    { id: 'real-estate', label: 'Real Estate', icon: <HomeIcon size={20} />, color: '#A2C2F2' },
-    { id: 'petcare', label: 'Petcare', icon: <Dog size={20} />, color: '#A2C2F2' },
-];
+// Categories are now loaded dynamically from Supabase
+// Icons map for dynamic rendering
+const ICON_MAP = {
+    'Briefcase': <Briefcase size={20} />,
+    'Smartphone': <Smartphone size={20} />,
+    'Utensils': <Utensils size={20} />,
+    'Wrench': <Wrench size={20} />,
+    'Droplet': <Droplet size={20} />,
+    'Truck': <Truck size={20} />,
+    'Home': <HomeIcon size={20} />,
+    'Dog': <Dog size={20} />,
+    'Home': <HomeIcon size={20} />,
+    'Dog': <Dog size={20} />,
+    'Box': <Filter size={20} />, // Default
+    'Diamond': <div style={{ fontSize: '20px' }}>💎</div> // For Premium
+};
 
 const CITIES = ['Lagos, Nigeria', 'Abuja, FCT', 'Port Harcourt, Rivers', 'Kano, Kano', 'Ibadan, Oyo'];
 
 const Home = () => {
     const { user } = useAuth();
     const [products, setProducts] = useState(MOCK_PRODUCTS);
+    const [categories, setCategories] = useState([]); // Dynamic categories
     const [loading, setLoading] = useState(true);
     const [activeCategory, setActiveCategory] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
@@ -41,6 +48,22 @@ const Home = () => {
             } else {
                 setLoading(true); // No cache, show spinner
             }
+
+            // Fetch Categories (Parallel)
+            const fetchCategories = async () => {
+                const { data } = await supabase.from('categories').select('*').order('created_at', { ascending: true });
+                if (data) {
+                    // Inject "Premium" as a virtual category at the start
+                    const premiumCategory = {
+                        id: 'premium',
+                        label: 'Premium',
+                        icon_name: 'Diamond',
+                        color: '#FFAB00' // Gold/Warning color
+                    };
+                    setCategories([premiumCategory, ...data]);
+                }
+            };
+            fetchCategories();
 
             // 2. Network fetch (background update)
             try {
@@ -80,7 +103,14 @@ const Home = () => {
     };
 
     const filteredProducts = products.filter(p => {
-        const matchesCategory = activeCategory === 'all' || p.category === activeCategory;
+        let matchesCategory = true;
+
+        if (activeCategory === 'premium') {
+            matchesCategory = p.is_premium === true || p.isPremium === true; // Handle both DB (snake_case) and Mock (camelCase)
+        } else {
+            matchesCategory = activeCategory === 'all' || p.category === activeCategory;
+        }
+
         const matchesFilter = filterType === 'all' || p.category === filterType;
         const matchesSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase());
         return matchesCategory && matchesFilter && matchesSearch;
@@ -213,7 +243,7 @@ const Home = () => {
 
             {/* Category Bubbles */}
             <div className="flex gap-md mb-md overflow-x-auto pb-sm" style={{ gap: '12px', overflowX: 'auto', paddingBottom: '8px' }}>
-                {CATEGORIES.map(cat => (
+                {categories.map(cat => (
                     <button
                         key={cat.id}
                         onClick={() => setActiveCategory(cat.id)}
@@ -231,13 +261,13 @@ const Home = () => {
                                 width: '64px',
                                 height: '64px',
                                 borderRadius: '50%',
-                                border: `2px solid ${activeCategory === cat.id ? 'var(--primary-blue)' : cat.color}`,
+                                border: `2px solid ${activeCategory === cat.id ? 'var(--primary-blue)' : cat.color || '#A2C2F2'}`,
                                 background: activeCategory === cat.id ? 'var(--primary-blue)' : 'white',
-                                color: activeCategory === cat.id ? 'white' : cat.color,
+                                color: activeCategory === cat.id ? 'white' : cat.color || '#A2C2F2',
                                 transition: 'all 0.2s'
                             }}
                         >
-                            {cat.icon}
+                            {ICON_MAP[cat.icon_name] || ICON_MAP['Box']}
                         </div>
                         <span className="text-xs font-medium text-center">{cat.label}</span>
                     </button>
@@ -255,7 +285,7 @@ const Home = () => {
 
             {/* Product Grid */}
             <div className="flex justify-between items-center mb-md">
-                <h2 className="font-bold text-lg">{activeCategory === 'all' ? 'Trending Ads' : `${CATEGORIES.find(c => c.id === activeCategory)?.label} Results`}</h2>
+                <h2 className="font-bold text-lg">{activeCategory === 'all' ? 'Trending Ads' : `${categories.find(c => c.id === activeCategory)?.label} Results`}</h2>
                 {loading && <span className="text-secondary text-sm">Loading...</span>}
             </div>
 

@@ -13,7 +13,7 @@ export const AuthProvider = ({ children }) => {
         const checkUser = async () => {
             const timeout = setTimeout(() => {
                 setLoading(false);
-            }, 1500); // Fast 1.5s timeout for modern app feel
+            }, 1000); // Super fast 1s timeout
 
             try {
                 const { data: { session } } = await supabase.auth.getSession();
@@ -61,7 +61,6 @@ export const AuthProvider = ({ children }) => {
     const login = async (email, password) => {
         try {
             // DIRECT RAW FETCH - bypassing SDK hang completely
-            // This is the fastest possible way to check credentials
             const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
             const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -81,14 +80,24 @@ export const AuthProvider = ({ children }) => {
                 throw new Error(data.error_description || data.msg || 'Invalid login credentials');
             }
 
-            // Manually inject the valid session back into the SDK
-            // This ensures the rest of the app (using the SDK) works normally
-            const { error: setSessionError } = await supabase.auth.setSession({
+            // Race setSession against a 2s timeout
+            // If the SDK is broken/hanging, we just skip this and set state manually
+            const setSessionPromise = supabase.auth.setSession({
                 access_token: data.access_token,
                 refresh_token: data.refresh_token
             });
 
-            if (setSessionError) throw setSessionError;
+            const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve('TIMEOUT'), 2000));
+
+            const result = await Promise.race([setSessionPromise, timeoutPromise]);
+
+            if (result === 'TIMEOUT') {
+                console.warn('SDK setSession timed out. Manually setting state.');
+                // Manually set user state since SDK refused to
+                setUser({ ...data.user, session: data });
+            } else if (result.error) {
+                throw result.error;
+            }
 
             return { user: data.user, session: data };
         } catch (err) {
@@ -96,7 +105,6 @@ export const AuthProvider = ({ children }) => {
             throw err;
         }
     };
-
 
     const register = async (email, password, metadata) => {
         const { data, error } = await supabase.auth.signUp({
@@ -133,9 +141,14 @@ export const AuthProvider = ({ children }) => {
     };
 
     const logout = async () => {
-        const { error } = await supabase.auth.signOut();
-        if (error) throw error;
-        setUser(null);
+        try {
+            await supabase.auth.signOut();
+        } catch (error) {
+            console.error('Logout error:', error);
+        } finally {
+            setUser(null);
+            // Optionally clear any local storage if used purely for auth caching
+        }
     };
 
     const resetPassword = async (email) => {
