@@ -23,7 +23,12 @@ const Header = () => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
+    // 1. Close menu first
     setShowUserMenu(false);
+    // 2. Clear critical storage immediately
+    localStorage.removeItem('sb-vbdnxwstnshjsws-auth-token'); // Clear Supabase token if known prefix
+    sessionStorage.clear();
+    // 3. Call context logout which has the window.location.href
     logout();
   };
 

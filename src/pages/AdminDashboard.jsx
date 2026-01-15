@@ -220,42 +220,31 @@ const CategoryManagement = () => {
 
     useEffect(() => {
         let mounted = true;
-
-        const fetchCategoriesSafe = async () => {
-            setLoading(true);
-            try {
-                // Timebox the request to 5 seconds
-                const timeoutPromise = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error('Request timed out')), 5000)
-                );
-
-                const { data, error } = await Promise.race([
-                    supabase.from('categories').select('*').order('created_at', { ascending: true }),
-                    timeoutPromise
-                ]);
-
-                if (!mounted) return;
-
-                if (error) {
-                    console.error('Error fetching categories:', error);
-                    // Don't clear categories if we have error, just show empty state or previous state
-                    // But here we init with empty array so it is fine
-                    setCategories([]);
-                } else {
-                    setCategories(data || []);
-                }
-            } catch (err) {
-                console.error('Category fetch error:', err);
-                if (mounted) setCategories([]);
-            } finally {
-                if (mounted) setLoading(false);
-            }
-        };
-
         fetchCategoriesSafe();
-
         return () => { mounted = false; };
     }, []);
+
+    const fetchCategoriesSafe = async () => {
+        setLoading(true);
+        try {
+            // Set a hard timeout for the UI spinner
+            const timer = setTimeout(() => {
+                if (loading) setLoading(false);
+            }, 5000);
+
+            const { data, error } = await supabase.from('categories').select('*').order('created_at', { ascending: true });
+
+            clearTimeout(timer);
+
+            if (error) throw error;
+            setCategories(data || []);
+        } catch (err) {
+            console.error('Category fetch error:', err);
+            // Don't modify categories on error, keep existing state
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const addCategory = async (e) => {
         e.preventDefault();

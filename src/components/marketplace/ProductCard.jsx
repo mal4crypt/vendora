@@ -6,31 +6,70 @@ import { useNavigate } from 'react-router-dom';
 import { MapPin, Heart, ShoppingCart as CartIcon } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
+import { supabase } from '../../supabase';
 
 const ProductCard = ({ product }) => {
     const navigate = useNavigate();
     const { addToCart } = useCart();
 
-    // Wishlist Logic
-    const [isLiked, setIsLiked] = React.useState(() => {
-        const saved = localStorage.getItem('vendora_wishlist');
-        const wishlist = saved ? JSON.parse(saved) : [];
-        return wishlist.includes(product.id);
-    });
+    const { user } = useAuth();
+    const [isLiked, setIsLiked] = React.useState(false);
 
-    const toggleLike = (e) => {
-        e.stopPropagation();
-        const saved = localStorage.getItem('vendora_wishlist');
-        let wishlist = saved ? JSON.parse(saved) : [];
-
-        if (isLiked) {
-            wishlist = wishlist.filter(id => id !== product.id);
+    // Check DB status on mount
+    React.useEffect(() => {
+        if (user) {
+            checkWishlistStatus();
         } else {
-            wishlist.push(product.id);
+            // Fallback for guests
+            const saved = localStorage.getItem('vendora_wishlist');
+            if (saved) {
+                setIsLiked(JSON.parse(saved).includes(product.id));
+            }
+        }
+    }, [user, product.id]);
+
+    const checkWishlistStatus = async () => {
+        const { data } = await supabase
+            .from('wishlist')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('product_id', product.id)
+            .maybeSingle(); // Use maybeSingle to avoid 406 error if not found
+        if (data) setIsLiked(true);
+    };
+
+    const toggleLike = async (e) => {
+        e.stopPropagation();
+
+        if (!user) {
+            // Guest Logic (LocalStorage)
+            const saved = localStorage.getItem('vendora_wishlist');
+            let wishlist = saved ? JSON.parse(saved) : [];
+            if (isLiked) {
+                wishlist = wishlist.filter(id => id !== product.id);
+            } else {
+                wishlist.push(product.id);
+            }
+            localStorage.setItem('vendora_wishlist', JSON.stringify(wishlist));
+            setIsLiked(!isLiked);
+            alert('Please login to save your wishlist permanently!');
+            return;
         }
 
-        localStorage.setItem('vendora_wishlist', JSON.stringify(wishlist));
-        setIsLiked(!isLiked);
+        // Auth User Logic (Database)
+        if (isLiked) {
+            const { error } = await supabase
+                .from('wishlist')
+                .delete()
+                .eq('user_id', user.id)
+                .eq('product_id', product.id);
+            if (!error) setIsLiked(false);
+        } else {
+            const { error } = await supabase
+                .from('wishlist')
+                .insert([{ user_id: user.id, product_id: product.id }]);
+            if (!error) setIsLiked(true);
+        }
     };
 
     const handleAddToCart = (e) => {

@@ -147,7 +147,8 @@ export const AuthProvider = ({ children }) => {
             console.error('Logout error:', error);
         } finally {
             setUser(null);
-            // Optionally clear any local storage if used purely for auth caching
+            // Force a hard refresh to clear any lingering Supabase auth state from memory
+            window.location.href = '/login';
         }
     };
 

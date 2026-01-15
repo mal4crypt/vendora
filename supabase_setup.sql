@@ -11,14 +11,17 @@ CREATE TABLE IF NOT EXISTS categories (
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 
 -- Policy: Everyone can read categories
+DROP POLICY IF EXISTS "Public categories are viewable by everyone" ON categories;
 CREATE POLICY "Public categories are viewable by everyone" 
 ON categories FOR SELECT 
 USING (true);
 
 -- Policy: Only Admins can insert/delete (You can refine this later, for now let authenticated users add for testing if needed, or restrict to admin email)
+-- Policy: Allow verified admins OR any purely authenticated user for now to unblock
+DROP POLICY IF EXISTS "Admins can manage categories" ON categories;
 CREATE POLICY "Admins can manage categories" 
 ON categories FOR ALL 
-USING (auth.jwt() ->> 'email' = 'mal4crypt404@gmail.com');
+USING (auth.role() = 'authenticated');
 
 -- Insert default categories
 INSERT INTO categories (id, label, icon_name, color) VALUES

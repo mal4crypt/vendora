@@ -10,14 +10,17 @@ CREATE TABLE IF NOT EXISTS wishlist (
 -- RLS for Wishlist
 ALTER TABLE wishlist ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own wishlist" ON wishlist;
 CREATE POLICY "Users can view own wishlist" 
 ON wishlist FOR SELECT 
 USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert into own wishlist" ON wishlist;
 CREATE POLICY "Users can insert into own wishlist" 
 ON wishlist FOR INSERT 
 WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete from own wishlist" ON wishlist;
 CREATE POLICY "Users can delete from own wishlist" 
 ON wishlist FOR DELETE 
 USING (auth.uid() = user_id);
@@ -35,11 +38,13 @@ CREATE TABLE IF NOT EXISTS orders (
 -- RLS for Orders
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own orders" ON orders;
 CREATE POLICY "Users can view own orders" 
 ON orders FOR SELECT 
 USING (auth.uid() = user_id);
 
 -- Allow inserting orders (e.g. from checkout)
+DROP POLICY IF EXISTS "Users can create orders" ON orders;
 CREATE POLICY "Users can create orders" 
 ON orders FOR INSERT 
 WITH CHECK (auth.uid() = user_id);

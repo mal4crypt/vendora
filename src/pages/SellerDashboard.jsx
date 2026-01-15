@@ -19,7 +19,7 @@ const SellerDashboard = () => {
     // Form State
     const [formData, setFormData] = useState({
         title: '',
-        category: 'trading', // trading | services
+        category: '', // dynamic
         price: '',
         description: '',
         location: user?.city ? `${user.city}, ${user.state}` : '',
@@ -31,6 +31,23 @@ const SellerDashboard = () => {
             fetchSellerListings();
         }
     }, [user]);
+
+    const [categories, setCategories] = useState([]);
+
+    useEffect(() => {
+        if (user) {
+            fetchSellerListings();
+            fetchCategories();
+        }
+    }, [user]);
+
+    const fetchCategories = async () => {
+        const { data } = await supabase
+            .from('categories')
+            .select('*')
+            .order('label', { ascending: true });
+        if (data) setCategories(data);
+    };
 
     const fetchSellerListings = async () => {
         setIsLoading(true);
@@ -88,7 +105,7 @@ const SellerDashboard = () => {
             setShowForm(false);
             setFormData({
                 title: '',
-                category: 'trading',
+                category: '',
                 price: '',
                 description: '',
                 location: user?.city ? `${user.city}, ${user.state}` : '',
@@ -159,10 +176,10 @@ const SellerDashboard = () => {
                                             onChange={handleChange}
                                             style={{ padding: '10px', borderRadius: '4px', border: '1px solid var(--border-color)' }}
                                         >
-                                            <option value="trading">Trading (Goods)</option>
-                                            <option value="services">Services</option>
-                                            <option value="catering">Catering</option>
-                                            <option value="repair">Repair</option>
+                                            <option value="">Select Category</option>
+                                            {categories.map(cat => (
+                                                <option key={cat.id} value={cat.id}>{cat.label}</option>
+                                            ))}
                                         </select>
                                     </div>
                                 </div>

@@ -49,18 +49,28 @@ const Home = () => {
                 setLoading(true); // No cache, show spinner
             }
 
-            // Fetch Categories (Parallel)
+            // Fetch Categories (Parallel) with manual fallback
             const fetchCategories = async () => {
-                const { data } = await supabase.from('categories').select('*').order('created_at', { ascending: true });
-                if (data) {
-                    // Inject "Premium" as a virtual category at the start
-                    const premiumCategory = {
-                        id: 'premium',
-                        label: 'Premium',
-                        icon_name: 'Diamond',
-                        color: '#FFAB00' // Gold/Warning color
-                    };
-                    setCategories([premiumCategory, ...data]);
+                try {
+                    const { data, error } = await supabase.from('categories').select('*').order('created_at', { ascending: true });
+                    if (error) throw error;
+                    if (data) {
+                        const premiumCategory = {
+                            id: 'premium', label: 'Premium', icon_name: 'Diamond', color: '#FFAB00'
+                        };
+                        setCategories([premiumCategory, ...data]);
+                    }
+                } catch (err) {
+                    console.warn('Using default categories due to fetch error');
+                    // FALLBACK: Use hardcoded categories if DB fails
+                    const defaultCats = [
+                        { id: 'premium', label: 'Premium', icon_name: 'Diamond', color: '#FFAB00' },
+                        { id: 'trading', label: 'Trading', icon_name: 'Smartphone', color: '#A2C2F2' },
+                        { id: 'catering', label: 'Catering', icon_name: 'Utensils', color: '#A2C2F2' },
+                        { id: 'repair', label: 'Repair', icon_name: 'Wrench', color: '#A2C2F2' },
+                        { id: 'logistics', label: 'Logistics', icon_name: 'Truck', color: '#A2C2F2' }
+                    ];
+                    setCategories(defaultCats);
                 }
             };
             fetchCategories();
